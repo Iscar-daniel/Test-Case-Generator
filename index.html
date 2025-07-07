@@ -1,0 +1,74 @@
+        </div>
+    </div>
+    <script>
+        const form = document.getElementById('testCaseForm');
+        const promptInput = document.getElementById('prompt');
+        const resultsContainer = document.getElementById('resultsContainer');
+        const testCaseBody = document.getElementById('testCaseBody');
+        const alertContainer = document.getElementById('alertContainer');
+        const btn = form.querySelector('button[type="submit"]');
+        const normalText = btn.querySelector('.normal-text');
+        const loadingText = btn.querySelector('.loading');
+
+        form.addEventListener('submit', async function(e) {
+            e.preventDefault();
+            resultsContainer.style.display = 'none';
+            alertContainer.innerHTML = '';
+            testCaseBody.innerHTML = '';
+            btn.disabled = true;
+            normalText.style.display = 'none';
+            loadingText.style.display = 'inline-block';
+
+            try {
+                const response = await fetch('/generate', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ prompt: promptInput.value })
+                });
+                const data = await response.json();
+
+                if (data.error) {
+                    alertContainer.innerHTML = `<div class="alert alert-danger">${data.error}</div>`;
+                } else if (data.test_cases && data.test_cases.length > 0) {
+                    data.test_cases.forEach(tc => {
+                        testCaseBody.innerHTML += `
+                            <tr>
+                                <td>${tc.no}</td>
+                                <td>${tc.scenario_name}</td>
+                                <td>${tc.steps_to_reproduce.replace(/\n/g, '<br>')}</td>
+                                <td>${tc.expected_result}</td>
+                            </tr>
+                        `;
+                    });
+                    resultsContainer.style.display = 'block';
+                } else {
+                    alertContainer.innerHTML = `<div class="alert alert-warning">No test cases generated.</div>`;
+                }
+            } catch (err) {
+                alertContainer.innerHTML = `<div class="alert alert-danger">Error: ${err.message}</div>`;
+            } finally {
+                btn.disabled = false;
+                normalText.style.display = 'inline-block';
+                loadingText.style.display = 'none';
+            }
+        });
+
+        function copyToClipboard() {
+            let table = document.getElementById('testCaseTable');
+            let range, sel;
+            if (document.createRange && window.getSelection) {
+                range = document.createRange();
+                sel = window.getSelection();
+                sel.removeAllRanges();
+                range.selectNodeContents(table);
+                sel.addRange(range);
+                document.execCommand('copy');
+                sel.removeAllRanges();
+                alert('Table copied to clipboard!');
+            }
+        }
+    </script>
+</body>
+</html>
